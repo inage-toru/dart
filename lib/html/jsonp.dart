@@ -6,26 +6,21 @@
 interface JSONP default _JSONPImpl {
   JSONP(String uri, [String callbackParamName]);
   void send(Function replyCallback);
-  void remove();
 }
 
 class _JSONPImpl implements JSONP {
   static Map<String, _JSONPImpl> _instanceMap;
   
-  ScriptElement _callback;
+  ScriptElement _callback, _request;
   
   String _callbackParamName;
   
   Function _replyCallback;
   
-  ScriptElement _request;
-  
   String _uri;
   
   factory _JSONPImpl(String uri, [String callbackParamName = 'callbackForJsonpApi']) {
-    if (_instanceMap == null) {
-      _instanceMap = new Map<String, _JSONPImpl>();
-    }
+    if (_instanceMap == null) _instanceMap = new Map<String, _JSONPImpl>();
     if (!_instanceMap.containsKey(callbackParamName)) {
       _instanceMap[callbackParamName] = new _JSONPImpl._internal(uri, callbackParamName);
     } else {
@@ -34,16 +29,10 @@ class _JSONPImpl implements JSONP {
     return _instanceMap[callbackParamName];
   }
   
-  _JSONPImpl._internal(this._uri, this._callbackParamName) :
-      _callback = new Element.tag('script') {
+  _JSONPImpl._internal(this._uri, this._callbackParamName)
+      : _callback = new Element.tag('script') {
     window.on.message.add(_dataReceived);
-    _appendScriptElementForCallback(document.head);
-  }
-  
-  void remove() {
-    window.on.message.remove(_dataReceived);
-    _callback.remove();
-    _callback = null;
+    _appendScriptElementForCallback(document.body);
   }
   
   void send(Function replyCallback) {
@@ -53,7 +42,7 @@ class _JSONPImpl implements JSONP {
   
   void _appendScriptElementForCallback(Element element) {
     _callback.innerHTML = new StringBuffer()
-      .add('function ${_callbackParamName}(data){')
+      .add('function $_callbackParamName(data) {')
       .add('var json = { name: arguments.callee.name, data: data };')
       .add('window.postMessage(JSON.stringify(json), "*");')
       .add('}')
@@ -63,7 +52,7 @@ class _JSONPImpl implements JSONP {
   
   void _appendScriptElementForRequest(Element element) {
     _request = new Element.tag('script');
-    _request.src = '${_uri}&callback=${_callbackParamName}';
+    _request.src = '$_uri&callback=$_callbackParamName';
     document.body.elements.add(_request);
   }
   
